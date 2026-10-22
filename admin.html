@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Панель администратора - Расписание</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div class="admin-container">
+      <button id="toggleHeaderBtn" class="header-toggle-btn" title="Скрыть/показать панель">
+        <span class="header-toggle-icon">▲</span>
+      </button>
+      <header class="admin-header" id="adminHeader">
+        <div class="header-main">
+          <h1>Панель администратора</h1>
+          <div class="header-actions">
+            <a href="index.html" class="btn btn-secondary" target="_blank">Просмотр табло</a>
+            <button id="loadFromConfigBtn" class="btn btn-secondary">Загрузить из config.js</button>
+            <button id="saveBtn" class="btn btn-primary">Сохранить изменения</button>
+          </div>
+        </div>
+        <div class="header-info">
+          <div id="adminClock" class="admin-clock">--:--:--</div>
+          <div class="theme-controls">
+            <label>
+              Тема:
+              <select id="themeSelect">
+                <option value="light">Светлая</option>
+                <option value="dark">Тёмная</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="background-presets">
+          <span class="background-title">Фон табло</span>
+          <div class="background-options">
+            <label class="background-option" data-style="night-sky">
+              <input type="radio" name="backgroundStyle" value="night-sky" />
+              <span class="background-swatch night-sky"></span>
+              <span class="background-name">Ночное небо</span>
+            </label>
+            <label class="background-option" data-style="aurora">
+              <input type="radio" name="backgroundStyle" value="aurora" />
+              <span class="background-swatch aurora"></span>
+              <span class="background-name">Аврора</span>
+            </label>
+            <label class="background-option" data-style="forest">
+              <input type="radio" name="backgroundStyle" value="forest" />
+              <span class="background-swatch forest"></span>
+              <span class="background-name">Лес</span>
+            </label>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <!-- Настройки отображения -->
+        <section class="admin-section">
+          <h2>Настройки отображения</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rotationInterval">Интервал автопереключения (сек):</label>
+              <input type="number" id="rotationInterval" class="form-input" min="5" value="60" />
+            </div>
+            <div class="form-group">
+              <label for="rotationPageSize">Количество отделений на экране:</label>
+              <input type="number" id="rotationPageSize" class="form-input" min="1" value="1" />
+            </div>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="showWeekendsToggle" />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-labels">
+                <span class="toggle-label-main">Показывать выходные дни</span>
+                <span
+                  class="toggle-state"
+                  data-on="выходные включены"
+                  data-off="выходные выключены"
+                ></span>
+              </span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="showTicketsRemainingToggle" />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-labels">
+                <span class="toggle-label-main">Показывать количество оставшихся талонов</span>
+                <span
+                  class="toggle-state"
+                  data-on="талоны включены"
+                  data-off="талоны выключены"
+                ></span>
+              </span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="useByTicketToggle" />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-labels">
+                <span class="toggle-label-main">Использовать запись по талону</span>
+                <span
+                  class="toggle-state"
+                  data-on="запись по талону включена"
+                  data-off="запись по талону выключена"
+                ></span>
+              </span>
+            </label>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="departmentLayout">Количество столбцов:</label>
+              <select id="departmentLayout" class="form-input">
+                <option value="1">1 столбец</option>
+                <option value="2">2 столбца</option>
+                <option value="3">3 столбца</option>
+                <option value="4">4 столбца</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="fontFamily">Шрифт табло:</label>
+              <select id="fontFamily" class="form-input">
+                <option value="Inter">Inter</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Arial">Arial</option>
+                <option value="Helvetica">Helvetica</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Courier New">Courier New</option>
+                <option value="system-ui">Системный</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fontScale">Масштаб текста и элементов:</label>
+              <input type="range" id="fontScale" class="form-input" min="0.5" max="2" step="0.1" value="1" />
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--fg-muted); margin-top: 4px;">
+                <span>50%</span>
+                <span id="fontScaleValue" style="font-weight: 600;">100%</span>
+                <span>200%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Сохранённые конфигурации -->
+        <section class="admin-section">
+          <div class="section-header">
+            <h2>Сохранённые конфигурации</h2>
+          </div>
+          <div class="config-save-row">
+            <input
+              type="text"
+              id="configName"
+              class="form-input"
+              placeholder="Название, например «Осеннее расписание»"
+            />
+            <button type="button" id="saveConfigBtn" class="btn btn-success">
+              Сохранить текущие настройки
+            </button>
+          </div>
+          <div id="configList" class="config-list">
+            <!-- Список загружается через JavaScript -->
+          </div>
+        </section>
+
+        <!-- Список отделений -->
+        <section class="admin-section">
+          <div class="section-header">
+            <h2>Отделения</h2>
+            <button id="addDepartmentBtn" class="btn btn-success">+ Добавить отделение</button>
+          </div>
+          <div id="departmentsList" class="departments-list">
+            <!-- Отделения будут добавлены через JavaScript -->
+          </div>
+        </section>
+      </div>
+
+      <div id="notification" class="notification"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>
+
+

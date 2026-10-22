@@ -1,0 +1,410 @@
+/* (2) Контент: отделения и врачи */
+.content {
+  padding: var(--padding);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 12px;
+}
+
+.content[data-department-columns="1"] {
+  grid-template-columns: 1fr;
+}
+
+.content[data-department-columns="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.content[data-department-columns="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.content[data-department-columns="4"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.board-empty {
+  grid-column: 1 / -1;
+  padding: 32px;
+  border: 2px dashed rgba(148, 163, 184, 0.3);
+  border-radius: var(--radius);
+  text-align: center;
+  color: var(--muted);
+  background: rgba(26, 47, 79, 0.4);
+  font-size: 1.1em;
+}
+
+.department-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(17, 34, 64, 0.75);
+  border-radius: var(--radius);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 14px 16px 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.45);
+}
+
+.department-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.department-number {
+  font-size: clamp(20px, 3.2vh, 36px);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.department-name {
+  font-size: clamp(18px, 2.8vh, 30px);
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.department-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.department-placeholder {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--fg-light);
+  text-align: center;
+  font-size: 1em;
+}
+
+.doctor-schedule-card {
+  background: rgba(10, 25, 41, 0.6);
+  border-radius: var(--radius);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doctor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.doctor-info {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.doctor-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doctor-name {
+  font-size: clamp(18px, 2.6vh, 28px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.doctor-specialty {
+  font-size: clamp(14px, 2vh, 20px);
+  color: var(--fg-light);
+  line-height: 1.2;
+}
+
+.doctor-meta {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.doctor-meta .label {
+  display: block;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.doctor-meta .value {
+  font-size: 1.4em;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.doctor-office {
+  min-width: 110px;
+  text-align: right;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: rgba(17, 34, 64, 0.8);
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  font-size: clamp(12px, 1.9vh, 18px);
+}
+
+.schedule-table thead th {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--fg-light);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.schedule-table .mode-col {
+  text-align: left;
+  padding-left: 16px;
+  font-weight: 600;
+  width: 160px;
+  line-height: 1.4;
+}
+
+.office-description {
+  display: block;
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--fg-light);
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+.schedule-table .slot-cell {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.schedule-table .slot-cell-current,
+.schedule-table .day-col-current {
+  background: rgba(34, 197, 94, 0.28) !important;
+  border-left: 4px solid rgba(34, 197, 94, 0.95);
+  border-right: 4px solid rgba(34, 197, 94, 0.95);
+}
+
+.schedule-table .day-col-current {
+  border-top: 4px solid rgba(34, 197, 94, 0.95);
+  color: #ffffff;
+}
+
+.schedule-table tbody tr:last-child .slot-cell-current {
+  border-bottom: 4px solid rgba(34, 197, 94, 0.95);
+}
+
+.slot-time {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.slot-tickets {
+  margin-top: 6px;
+  font-size: 0.8em;
+  color: var(--fg-light);
+}
+
+.schedule-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+}
+:root {
+  --bg: #0a1929;
+  --bg-secondary: #112240;
+  --bg-card: #1a2f4f;
+  --fg: #e2e8f0;
+  --fg-light: #cbd5e1;
+  --muted: #94a3b8;
+  --accent: #3b82f6;
+  --accent-dark: #2563eb;
+  --border: rgba(148, 163, 184, 0.1);
+
+  --font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    "Noto Sans", "Liberation Sans", sans-serif;
+
+  --padding: 24px;
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #0a1929 0%, #112240 50%, #0f172a 100%);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: var(--font-family);
+  font-size: clamp(14px, 2.1vh, 22px);
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body[data-board-bg="night-sky"] {
+  background: linear-gradient(135deg, #0a1929 0%, #112240 50%, #0f172a 100%);
+  background-attachment: fixed;
+}
+
+body[data-board-bg="aurora"] {
+  background: linear-gradient(140deg, #0f172a 0%, #312e81 45%, #16a34a 100%);
+  background-attachment: fixed;
+}
+
+body[data-board-bg="forest"] {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #0f766e 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.board {
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* (1) Верхняя строка */
+.topbar {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  padding: 20px var(--padding);
+  border-bottom: 1px solid var(--border);
+  background: rgba(26, 47, 79, 0.6);
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.topbar .left {
+  font-weight: 700;
+  font-size: clamp(18px, 3.2vh, 36px);
+  text-align: center;
+}
+
+.topbar .right {
+  color: var(--fg);
+  font-size: clamp(22px, 4.2vh, 48px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  position: absolute;
+  right: var(--padding);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 16px;
+  border-radius: var(--radius);
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+
+.footer {
+  margin-top: auto;
+  padding: 16px var(--padding);
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95em;
+  background: rgba(26, 47, 79, 0.4);
+}
+
+#realtime-clock {
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 18px rgba(59, 130, 246, 0.55);
+}
+
+@media (max-width: 1200px) {
+  .content[data-department-columns="3"],
+  .content[data-department-columns="4"] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .content[data-department-columns="1"],
+  .content[data-department-columns="2"],
+  .content[data-department-columns="3"],
+  .content[data-department-columns="4"] {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .doctor-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-info {
+    max-width: 100%;
+  }
+
+  .doctor-office {
+    text-align: left;
+  }
+
+  .doctor-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+.doctor-parity {
+  font-size: clamp(11px, 1.6vh, 16px);
+  color: var(--fg-light);
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  white-space: nowrap;
+}
+
+.schedule-table .mode-name {
+  display: block;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
