@@ -3,11 +3,15 @@ import {
   DAY_SHORT,
   DEFAULTS,
   HIDDEN_DAY,
+  PARITY_SHORT,
   escapeHtml,
+  getDateOfWeekday,
+  getParityForDay,
   getVisibleDays,
   isDoctorVisibleToday,
   normalizeDisplay,
   normalizeOffice,
+  normalizeSchedule,
 } from "./shared.js";
 
 (function () {
@@ -262,19 +266,6 @@ import {
     `;
   }
 
-  function renderParityBadge(doctor) {
-    const parity = doctor?.parity;
-    if (!parity || typeof parity !== "object") return "";
-
-    const even = parity.even === undefined ? true : Boolean(parity.even);
-    const odd = parity.odd === undefined ? true : Boolean(parity.odd);
-    if (even === odd) return "";
-
-    return `<span class="doctor-parity">${
-      even ? "по чётным числам" : "по нечётным числам"
-    }</span>`;
-  }
-
   // Врач не показывается, если отмечен как скрытый или сегодняшнее число
   // не совпадает с выбранной чётностью. Обе галочки или ни одной — показываем всегда.
   function renderDoctorCard(doctor, dept, visibleDays, showTicketsRemaining) {
@@ -335,19 +326,22 @@ import {
             <div class="doctor-specialty">${escapeHtml(
               doctor.specialty || "Специальность не указана"
             )}</div>
-            ${renderParityBadge(doctor)}
           </div>
           <table class="schedule-table">
             <thead>
               <tr>
                 <th class="mode-col"></th>
                 ${visibleDays
-                  .map(
-                    (day) =>
-                      `<th class="day-col${
-                        day === getCurrentDay() ? " day-col-current" : ""
-                      }">${DAY_SHORT[day] || day.toLowerCase()}</th>`
-                  )
+                  .map((day) => {
+                    const date = getDateOfWeekday(day);
+                    const parityKey = getParityForDay(day);
+                    return `<th class="day-col${
+                      day === getCurrentDay() ? " day-col-current" : ""
+                    }">${DAY_SHORT[day] || day.toLowerCase()}
+                      <span class="day-parity">${date.getDate()}, ${
+                      PARITY_SHORT[parityKey]
+                    }</span></th>`;
+                  })
                   .join("")}
               </tr>
             </thead>
@@ -477,7 +471,7 @@ import {
   function renderScheduleRow(
     modeLabel,
     office,
-    week = {},
+    schedule = {},
     dayOrder = DAY_ORDER,
     showTicketsRemaining = DEFAULT_SHOW_TICKETS_REMAINING,
     showModeLabel = false
@@ -486,6 +480,8 @@ import {
       Array.isArray(dayOrder) && dayOrder.length ? dayOrder : DAY_ORDER
     ).filter((day) => day !== HIDDEN_DAY);
     const currentDay = getCurrentDay();
+    const pair = normalizeSchedule(schedule);
+
     return `
       <tr>
         <td class="mode-col">${
@@ -495,22 +491,29 @@ import {
         }${office}</td>
         ${days
           .map((day) => {
-            const entry = week?.[day];
-            const time = compactRange(entry?.time ?? entry?.hours ?? "—");
+            // Чётное или нечётное число выпадает на этот день текущей недели
+            const parityKey = getParityForDay(day);
+            const entry = pair[parityKey];
+            const time = compactRange(entry?.time || "\u2014");
+
             const rawTickets = entry?.tickets;
-            let tickets = "—";
-            if (rawTickets !== undefined && rawTickets !== null && rawTickets !== "") {
+            let tickets = "\u2014";
+            if (
+              rawTickets !== undefined &&
+              rawTickets !== null &&
+              rawTickets !== ""
+            ) {
               const numeric = Number(rawTickets);
               tickets = Number.isNaN(numeric) ? rawTickets : numeric;
             }
-            
+
             let ticketsText = "";
-            if (showTicketsRemaining && tickets !== "—") {
+            if (showTicketsRemaining && tickets !== "\u2014") {
               // Для режима "без талона" не показываем "талонов нет"
-              if (tickets === 0 && modeLabel === "Без талона") {
+              if (tickets === 0 && modeLabel === "\u0411\u0435\u0437 \u0442\u0430\u043b\u043e\u043d\u0430") {
                 ticketsText = "";
               } else if (tickets === 0) {
-                ticketsText = `<div class="slot-tickets">талонов нет</div>`;
+                ticketsText = `<div class="slot-tickets">\u0442\u0430\u043b\u043e\u043d\u043e\u0432 \u043d\u0435\u0442</div>`;
               } else {
                 ticketsText = `<div class="slot-tickets">${escapeHtml(
                   `${tickets} ${pluralizeTickets(tickets)}`
@@ -519,11 +522,13 @@ import {
             }
 
             const isCurrentDay = day === currentDay;
-            const cellClass = isCurrentDay ? "slot-cell slot-cell-current" : "slot-cell";
+            const cellClass = isCurrentDay
+              ? "slot-cell slot-cell-current"
+              : "slot-cell";
 
             return `
               <td class="${cellClass}">
-                <div class="slot-time">${escapeHtml(time || "—")}</div>
+                <div class="slot-time">${escapeHtml(time || "\u2014")}</div>
                 ${ticketsText}
               </td>
             `;
@@ -641,7 +646,7 @@ import {
   function migrateDoctor(item, index) {
     const id = item?.id || `doctor-${index + 1}`;
     const legacyScheduleText = item?.scheduleText || "—";
-    const week = createWeekFromLegacy(legacyScheduleText, item?.freeTickets);
+    const schedule = createScheduleFromLegacy(legacyScheduleText, item?.freeTickets);
 
     return {
       id,
@@ -653,21 +658,19 @@ import {
         withoutTicket: true,
       },
       schedule: {
-        byTicket: week,
-        withoutTicket: week,
+        byTicket: schedule,
+        withoutTicket: schedule,
       },
       updatedAt: item?.updatedAt || new Date().toISOString(),
     };
   }
 
-  function createWeekFromLegacy(scheduleText, tickets) {
-    const legacy = compactRange(scheduleText || "—");
-    const ticketValue =
-      typeof tickets === "number" && tickets >= 0 ? tickets : "—";
-    return DAY_ORDER.reduce((acc, day) => {
-      acc[day] = { time: legacy, tickets: ticketValue };
-      return acc;
-    }, {});
+  function createScheduleFromLegacy(scheduleText, tickets) {
+    const slot = {
+      time: compactRange(scheduleText || "\u2014"),
+      tickets: typeof tickets === "number" && tickets >= 0 ? tickets : "\u2014",
+    };
+    return { even: { ...slot }, odd: { ...slot } };
   }
 
   function compactRange(text) {

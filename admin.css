@@ -905,3 +905,32 @@ body.header-hidden .admin-content {
   color: var(--fg-muted);
   font-size: 14px;
 }
+
+.schedule-parity-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-parity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-parity-label {
+  min-width: 140px;
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 14px;
+}
+
+.schedule-parity-inputs {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.schedule-parity-inputs .schedule-input {
+  flex: 1;
+}

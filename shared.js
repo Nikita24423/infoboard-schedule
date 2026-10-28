@@ -68,51 +68,83 @@ export function getVisibleDays(showWeekends = DEFAULTS.showWeekends) {
   return days.filter((day) => day !== HIDDEN_DAY);
 }
 
-export function createEmptyWeek() {
-  return DAY_ORDER.reduce((acc, day) => {
-    acc[day] = { time: "", tickets: "" };
-    return acc;
-  }, {});
-}
+// Расписание задаётся двумя значениями — для чётных и нечётных чисел месяца.
+// На табло они сами чередуются по дням недели.
+export const PARITY_KEYS = ["even", "odd"];
 
-export function normalizeWeek(week) {
-  if (!week || typeof week !== "object") {
-    return createEmptyWeek();
-  }
+export const PARITY_LABELS = {
+  even: "Чётные числа",
+  odd: "Нечётные числа",
+};
 
-  const result = {};
-  for (const day of DAY_ORDER) {
-    const entry = week[day] || {};
-    result[day] = {
-      time: entry.time ?? entry.hours ?? "",
-      tickets:
-        entry.tickets === undefined || entry.tickets === null
-          ? ""
-          : entry.tickets,
-    };
-  }
-  return result;
-}
+export const PARITY_SHORT = {
+  even: "чёт",
+  odd: "нечёт",
+};
 
-// Обе галочки (или ни одной) — врач принимает в любое число
-export function normalizeParity(parity) {
-  if (!parity || typeof parity !== "object") {
-    return { even: true, odd: true };
-  }
+export function createEmptySchedule() {
   return {
-    even: parity.even === undefined ? true : Boolean(parity.even),
-    odd: parity.odd === undefined ? true : Boolean(parity.odd),
+    even: { time: "", tickets: "" },
+    odd: { time: "", tickets: "" },
   };
 }
 
-// Врач скрыт вручную или сегодняшнее число другой чётности
-export function isDoctorVisibleToday(doctor, today = new Date()) {
-  if (!doctor || doctor.hidden) return false;
+function normalizeSlot(slot) {
+  if (!slot || typeof slot !== "object") {
+    return { time: "", tickets: "" };
+  }
+  return {
+    time: slot.time ?? slot.hours ?? "",
+    tickets:
+      slot.tickets === undefined || slot.tickets === null ? "" : slot.tickets,
+  };
+}
 
-  const { even, odd } = normalizeParity(doctor.parity);
-  if (even === odd) return true;
+// Принимает и новый формат {even, odd}, и старый — сетку по дням недели
+export function normalizeSchedule(source) {
+  if (!source || typeof source !== "object") {
+    return createEmptySchedule();
+  }
 
-  return today.getDate() % 2 === 0 ? even : odd;
+  if (source.even || source.odd) {
+    return {
+      even: normalizeSlot(source.even),
+      odd: normalizeSlot(source.odd),
+    };
+  }
+
+  // Старые данные: берём первый день со временем и ставим его в оба поля
+  const firstFilledDay = DAY_ORDER.map((day) => source[day]).find(
+    (entry) => entry && String(entry.time ?? entry.hours ?? "").trim()
+  );
+
+  if (!firstFilledDay) {
+    return createEmptySchedule();
+  }
+
+  const slot = normalizeSlot(firstFilledDay);
+  return { even: { ...slot }, odd: { ...slot } };
+}
+
+// Дата дня недели в той же неделе, что и сегодняшняя
+export function getDateOfWeekday(day, today = new Date()) {
+  const target = DAY_ORDER.indexOf(day);
+  if (target === -1) return new Date(today);
+
+  // В JS воскресенье — 0, а у нас неделя начинается с понедельника
+  const current = (today.getDay() + 6) % 7;
+  const date = new Date(today);
+  date.setDate(today.getDate() + (target - current));
+  return date;
+}
+
+// Какое из двух значений действует в этот день
+export function getParityForDay(day, today = new Date()) {
+  return getDateOfWeekday(day, today).getDate() % 2 === 0 ? "even" : "odd";
+}
+
+export function isDoctorVisibleToday(doctor) {
+  return Boolean(doctor) && !doctor.hidden;
 }
 
 export function normalizeOffice(office) {
