@@ -200,7 +200,6 @@
 
 .schedule-table .slot-cell-current,
 .schedule-table .day-col-current {
-  background: rgba(34, 197, 94, 0.28) !important;
   border-left: 4px solid rgba(34, 197, 94, 0.95);
   border-right: 4px solid rgba(34, 197, 94, 0.95);
 }

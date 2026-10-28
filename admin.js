@@ -7,7 +7,6 @@ import {
   escapeHtml,
   normalizeBackgroundStyle,
   normalizeDepartmentLayout,
-  normalizeFontScale,
   normalizeParity,
   normalizeWeek,
 } from "./shared.js";
@@ -66,7 +65,6 @@ import {
   const DEFAULT_USE_BY_TICKET = DEFAULTS.useByTicket;
   const DEFAULT_DEPARTMENT_LAYOUT = DEFAULTS.departmentLayout;
   const DEFAULT_FONT_FAMILY = DEFAULTS.fontFamily;
-  const DEFAULT_FONT_SCALE = DEFAULTS.fontScale;
 
   let doctorIdCounter = 0;
 
@@ -396,35 +394,6 @@ import {
     };
   }
 
-  function getFontScale(data = currentData) {
-    return normalizeFontScale(data?.display?.fontScale);
-  }
-
-  function updateFontScaleUI() {
-    const input = document.getElementById("fontScale");
-    const valueDisplay = document.getElementById("fontScaleValue");
-    const scale = getFontScale();
-    if (input) {
-      input.value = scale;
-    }
-    if (valueDisplay) {
-      valueDisplay.textContent = `${Math.round(scale * 100)}%`;
-    }
-  }
-
-  function handleFontScaleChange(event) {
-    const scale = Math.max(0.5, Math.min(2, Number(event.target.value) || DEFAULT_FONT_SCALE));
-    const valueDisplay = document.getElementById("fontScaleValue");
-    if (valueDisplay) {
-      valueDisplay.textContent = `${Math.round(scale * 100)}%`;
-    }
-    syncCurrentData();
-    currentData.display = {
-      ...(currentData.display || {}),
-      fontScale: scale,
-    };
-  }
-
   function normalizeData(data) {
     const base = {
       rotation: {
@@ -468,7 +437,6 @@ import {
           : Boolean(data.display.useByTicket);
       const departmentLayout = getDepartmentLayout(data);
       const fontFamily = getFontFamily(data);
-      const fontScale = getFontScale(data);
       return {
         ...base,
         rotation: {
@@ -493,7 +461,6 @@ import {
           useByTicket,
           departmentLayout,
           fontFamily,
-          fontScale,
         },
         updatedAt: data.updatedAt || new Date().toISOString(),
       };
@@ -542,7 +509,6 @@ import {
         : Boolean(data.display.useByTicket);
     const departmentLayout = getDepartmentLayout(data);
     const fontFamily = getFontFamily(data);
-    const fontScale = getFontScale(data);
 
     return {
       rotation,
@@ -554,7 +520,6 @@ import {
         useByTicket,
         departmentLayout,
         fontFamily,
-        fontScale,
       },
       updatedAt: data.updatedAt || new Date().toISOString(),
     };
@@ -575,7 +540,6 @@ import {
         useByTicket: DEFAULT_USE_BY_TICKET,
         departmentLayout: DEFAULT_DEPARTMENT_LAYOUT,
         fontFamily: DEFAULT_FONT_FAMILY,
-        fontScale: DEFAULT_FONT_SCALE,
       },
       updatedAt: new Date().toISOString(),
     };
@@ -712,7 +676,6 @@ import {
     updateUseByTicketToggleUI();
     updateDepartmentLayoutUI();
     updateFontFamilyUI();
-    updateFontScaleUI();
 
     const departmentsList = document.getElementById("departmentsList");
     departmentsList.innerHTML = "";
@@ -1000,12 +963,6 @@ import {
       fontFamily.addEventListener("change", handleFontFamilyChange);
     }
 
-    const fontScale = document.getElementById("fontScale");
-    if (fontScale) {
-      fontScale.addEventListener("input", handleFontScaleChange);
-      fontScale.addEventListener("change", handleFontScaleChange);
-    }
-
     document
       .querySelectorAll('input[name="backgroundStyle"]')
       .forEach((input) => {
@@ -1231,7 +1188,6 @@ import {
     const useByTicketToggle = document.getElementById("useByTicketToggle");
     const departmentLayoutSelect = document.getElementById("departmentLayout");
     const fontFamilySelect = document.getElementById("fontFamily");
-    const fontScaleInput = document.getElementById("fontScale");
 
     const intervalSec = Math.max(
       5,
@@ -1254,7 +1210,6 @@ import {
     const useByTicket = Boolean(useByTicketToggle?.checked);
     const departmentLayout = departmentLayoutSelect?.value || DEFAULT_DEPARTMENT_LAYOUT;
     const fontFamily = fontFamilySelect?.value || DEFAULT_FONT_FAMILY;
-    const fontScale = Math.max(0.5, Math.min(2, Number(fontScaleInput?.value || currentData.display?.fontScale || DEFAULT_FONT_SCALE)));
 
     const departments = deptCards.map((card, index) => {
       const deptId = card.dataset.deptId || `dept-${index + 1}`;
@@ -1379,7 +1334,6 @@ import {
         useByTicket,
         departmentLayout,
         fontFamily,
-        fontScale,
       },
       updatedAt: forSave ? new Date().toISOString() : currentData.updatedAt,
     };

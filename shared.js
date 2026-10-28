@@ -26,7 +26,6 @@ export const DEFAULTS = {
   useByTicket: false,
   departmentLayout: "2",
   fontFamily: "Inter",
-  fontScale: 1,
 };
 
 export function normalizeBackgroundStyle(value) {
@@ -46,13 +45,6 @@ export function normalizeDepartmentLayout(value) {
   return String(number);
 }
 
-export function normalizeFontScale(value) {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return DEFAULTS.fontScale;
-  }
-  return Math.max(0.5, Math.min(2, value));
-}
-
 export function normalizeDisplay(display = {}) {
   const source = display && typeof display === "object" ? display : {};
   const flag = (key) =>
@@ -67,7 +59,6 @@ export function normalizeDisplay(display = {}) {
     useByTicket: flag("useByTicket"),
     departmentLayout: normalizeDepartmentLayout(source.departmentLayout),
     fontFamily: source.fontFamily || DEFAULTS.fontFamily,
-    fontScale: normalizeFontScale(source.fontScale),
   };
 }
 

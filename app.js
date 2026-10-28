@@ -18,7 +18,7 @@ import {
   const DEFAULT_SHOW_TICKETS_REMAINING = DEFAULTS.showTicketsRemaining;
   const DEFAULT_DEPARTMENT_LAYOUT = DEFAULTS.departmentLayout;
   const DEFAULT_FONT_FAMILY = DEFAULTS.fontFamily;
-  const DEFAULT_FONT_SCALE = DEFAULTS.fontScale;
+  const DEFAULT_SCALE = 1;
 
   const state = {
     payload: null,
@@ -361,7 +361,7 @@ import {
   }
 
   function calculateAutoScale(numColumns, numDepartments = 1) {
-    if (typeof window === "undefined") return DEFAULT_FONT_SCALE;
+    if (typeof window === "undefined") return DEFAULT_SCALE;
     
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
@@ -423,18 +423,11 @@ import {
     const style = normalizeDisplay(payload?.display).backgroundStyle;
     const fontFamily = payload?.display?.fontFamily || DEFAULT_FONT_FAMILY;
     
-    // Всегда используем автоматический расчет масштаба на основе количества столбцов и отделений
-    // чтобы гарантировать, что контент поместится на экран
-    const manualScale =
-      typeof payload?.display?.fontScale === "number"
-        ? Math.max(0.5, Math.min(2, payload.display.fontScale))
-        : DEFAULT_FONT_SCALE;
-
-    let fontScale = manualScale;
-    if (numColumns !== null && numColumns >= 1 && numColumns <= 4) {
-      const autoScale = calculateAutoScale(numColumns, numDepartments);
-      fontScale = Math.max(0.3, Math.min(2, autoScale * manualScale));
-    }
+    // Масштаб считается автоматически по числу столбцов и отделений
+    const fontScale =
+      numColumns !== null && numColumns >= 1 && numColumns <= 4
+        ? calculateAutoScale(numColumns, numDepartments)
+        : DEFAULT_SCALE;
     
     if (typeof document !== "undefined" && document.body) {
       document.body.setAttribute("data-board-bg", style);
