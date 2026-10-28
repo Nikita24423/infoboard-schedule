@@ -953,6 +953,11 @@ import {
       configList.addEventListener("click", handleConfigListClick);
     }
 
+    const saveToConfigBtn = document.getElementById("saveToConfigBtn");
+    if (saveToConfigBtn) {
+      saveToConfigBtn.addEventListener("click", handleSaveToConfig);
+    }
+
     const addDepartmentBtn = document.getElementById("addDepartmentBtn");
     if (addDepartmentBtn) {
       addDepartmentBtn.addEventListener("click", handleAddDepartment);
@@ -1140,6 +1145,43 @@ import {
     } catch (err) {
       console.error("Ошибка загрузки из config.js:", err);
       showNotification("Не удалось загрузить данные из config.js", "error");
+    }
+  }
+
+  // Парная кнопка к «Загрузить из config.js»: пишет текущие данные в файл
+  async function handleSaveToConfig() {
+    if (
+      !confirm(
+        "Записать текущие настройки в config.js? Прежняя версия файла будет сохранена как config.backup.js."
+      )
+    ) {
+      return;
+    }
+
+    syncCurrentData();
+
+    try {
+      const response = await fetch("/api/config-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: currentData,
+          settings: {
+            dataSource: cfg?.dataSource,
+            backendUrl: cfg?.backendUrl,
+            pollIntervalMs: cfg?.pollIntervalMs,
+            retryBackoff: cfg?.retryBackoff,
+            orientation: cfg?.orientation,
+            theme: cfg?.theme,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      showNotification("Данные записаны в config.js", "success");
+    } catch (err) {
+      console.error("Ошибка записи config.js:", err);
+      showNotification("Не удалось записать config.js", "error");
     }
   }
 

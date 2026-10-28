@@ -36,6 +36,8 @@ let lastFetchAt = 0;
 let cache = { data: null, ts: 0 };
 const DATA_DIR = path.join(process.cwd(), "data");
 const CURRENT_FILE = path.join(DATA_DIR, "current.json");
+const CONFIG_FILE = path.join(process.cwd(), "config.js");
+const CONFIG_BACKUP_FILE = path.join(process.cwd(), "config.backup.js");
 const CONFIGS_FILE = path.join(DATA_DIR, "configs.json");
 
 let adminData = readJsonFile(CURRENT_FILE); // Данные, сохраненные через админ-панель
@@ -88,6 +90,7 @@ app.get("/api/schedule", async (req, res) => {
 
 // Защита всех операций записи
 app.post("/api/schedule", requireAdmin);
+app.post("/api/config-file", requireAdmin);
 app.post("/api/configs", requireAdmin);
 app.delete("/api/configs/:id", requireAdmin);
 
@@ -139,6 +142,54 @@ app.post("/api/schedule", (req, res) => {
     res.status(500).json({ error: "Ошибка сохранения данных" });
   }
 });
+
+// Записать текущие данные обратно в config.js
+app.post("/api/config-file", (req, res) => {
+  try {
+    const data = req.body?.data;
+    const settings = req.body?.settings;
+
+    if (!data || typeof data !== "object") {
+      return res.status(400).json({ error: "Неверный формат данных" });
+    }
+
+    // Старый файл сохраняем рядом, чтобы было куда вернуться
+    if (fs.existsSync(CONFIG_FILE)) {
+      fs.copyFileSync(CONFIG_FILE, CONFIG_BACKUP_FILE);
+    }
+
+    fs.writeFileSync(CONFIG_FILE, buildConfigFile(data, settings), "utf8");
+
+    console.log("config.js перезаписан из админ-панели");
+    res.json({ success: true, backup: "config.backup.js" });
+  } catch (e) {
+    console.error("Ошибка записи config.js:", e);
+    res.status(500).json({ error: "Не удалось записать config.js" });
+  }
+});
+
+function buildConfigFile(data, settings = {}) {
+  const base = {
+    dataSource: settings?.dataSource || "backend",
+    backendUrl: settings?.backendUrl || "/api/schedule",
+    pollIntervalMs: Number(settings?.pollIntervalMs) || 20000,
+    retryBackoff: settings?.retryBackoff || { baseMs: 5000, maxMs: 60000 },
+    orientation: settings?.orientation || "auto",
+    theme: settings?.theme || {},
+    mockData: data,
+  };
+
+  return [
+    "// Конфиг макета и поведения.",
+    "// Файл создан кнопкой «Сохранить в config.js» в админ-панели " +
+      new Date().toLocaleString("ru-RU") +
+      ".",
+    "// Предыдущая версия лежит в config.backup.js",
+    "",
+    "window.BoardConfig = " + JSON.stringify(base, null, 2) + ";",
+    "",
+  ].join("\n");
+}
 
 // ——— Именованные конфигурации ———
 
