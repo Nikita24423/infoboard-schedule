@@ -8,6 +8,7 @@ import {
   getDateOfWeekday,
   getParityForDay,
   getVisibleDays,
+  inferScheduleMode,
   isDoctorVisibleToday,
   normalizeDisplay,
   normalizeOffice,
@@ -270,6 +271,7 @@ import {
   // не совпадает с выбранной чётностью. Обе галочки или ни одной — показываем всегда.
   function renderDoctorCard(doctor, dept, visibleDays, showTicketsRemaining) {
     const accepts = doctor.accepts || {};
+    const scheduleMode = inferScheduleMode(doctor);
     const schedule = doctor.schedule || {};
     // В таблицу попадает готовый HTML, поэтому экранируем каждую часть
     const officeNumber = doctor.office
@@ -297,7 +299,8 @@ import {
             schedule.byTicket,
             visibleDays,
             showTicketsRemaining,
-            showModeLabels
+            showModeLabels,
+            scheduleMode
           )
         : "",
       accepts.withoutTicket
@@ -307,7 +310,8 @@ import {
             schedule.withoutTicket,
             visibleDays,
             showTicketsRemaining,
-            showModeLabels
+            showModeLabels,
+            scheduleMode
           )
         : "",
     ]
@@ -333,14 +337,16 @@ import {
                 <th class="mode-col"></th>
                 ${visibleDays
                   .map((day) => {
-                    const date = getDateOfWeekday(day);
-                    const parityKey = getParityForDay(day);
+                    // Число и чётность нужны только в режиме чёт/нечёт
+                    const parityHint =
+                      scheduleMode === "parity"
+                        ? `<span class="day-parity">${getDateOfWeekday(
+                            day
+                          ).getDate()}, ${PARITY_SHORT[getParityForDay(day)]}</span>`
+                        : "";
                     return `<th class="day-col${
                       day === getCurrentDay() ? " day-col-current" : ""
-                    }">${DAY_SHORT[day] || day.toLowerCase()}
-                      <span class="day-parity">${date.getDate()}, ${
-                      PARITY_SHORT[parityKey]
-                    }</span></th>`;
+                    }">${DAY_SHORT[day] || day.toLowerCase()}${parityHint}</th>`;
                   })
                   .join("")}
               </tr>
@@ -474,7 +480,8 @@ import {
     schedule = {},
     dayOrder = DAY_ORDER,
     showTicketsRemaining = DEFAULT_SHOW_TICKETS_REMAINING,
-    showModeLabel = false
+    showModeLabel = false,
+    scheduleMode = "weekly"
   ) {
     const days = (
       Array.isArray(dayOrder) && dayOrder.length ? dayOrder : DAY_ORDER
@@ -492,8 +499,10 @@ import {
         ${days
           .map((day) => {
             // Чётное или нечётное число выпадает на этот день текущей недели
-            const parityKey = getParityForDay(day);
-            const entry = pair[parityKey];
+            const entry =
+              scheduleMode === "parity"
+                ? pair[getParityForDay(day)]
+                : pair.week?.[day];
             const time = compactRange(entry?.time || "\u2014");
 
             const rawTickets = entry?.tickets;
@@ -670,7 +679,11 @@ import {
       time: compactRange(scheduleText || "\u2014"),
       tickets: typeof tickets === "number" && tickets >= 0 ? tickets : "\u2014",
     };
-    return { even: { ...slot }, odd: { ...slot } };
+    const week = DAY_ORDER.reduce((acc, day) => {
+      acc[day] = { ...slot };
+      return acc;
+    }, {});
+    return { even: { ...slot }, odd: { ...slot }, week };
   }
 
   function compactRange(text) {

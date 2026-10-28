@@ -1,12 +1,18 @@
 import {
+  DAY_ORDER,
   DEFAULTS,
+  EDITABLE_DAYS,
   PARITY_KEYS,
   PARITY_LABELS,
+  SCHEDULE_MODES,
+  SCHEDULE_MODE_LABELS,
   createEmptySchedule,
   escapeHtml,
+  inferScheduleMode,
   normalizeBackgroundStyle,
   normalizeDepartmentLayout,
   normalizeSchedule,
+  normalizeScheduleMode,
 } from "./shared.js";
 
 (function () {
@@ -63,6 +69,8 @@ import {
   const DEFAULT_USE_BY_TICKET = DEFAULTS.useByTicket;
   const DEFAULT_DEPARTMENT_LAYOUT = DEFAULTS.departmentLayout;
   const DEFAULT_FONT_FAMILY = DEFAULTS.fontFamily;
+
+  const DEFAULT_DOCTOR_SCHEDULE_MODE = "weekly";
 
   let doctorIdCounter = 0;
 
@@ -559,6 +567,7 @@ import {
       office: doctor.office || "",
       officeDescription: doctor.officeDescription || "",
       hidden: Boolean(doctor.hidden),
+      scheduleMode: inferScheduleMode(doctor),
       accepts: {
         byTicket:
           doctor.accepts?.byTicket === undefined
@@ -589,6 +598,7 @@ import {
       office: item?.office || "",
       officeDescription: item?.officeDescription || "",
       hidden: Boolean(item?.hidden),
+      scheduleMode: "weekly",
       accepts: { byTicket: true, withoutTicket: true },
       schedule: {
         byTicket: legacySchedule,
@@ -619,6 +629,7 @@ import {
       office: "",
       officeDescription: "",
       hidden: false,
+      scheduleMode: DEFAULT_DOCTOR_SCHEDULE_MODE,
       accepts: {
         byTicket: useByTicket,
         withoutTicket: true,
@@ -636,7 +647,11 @@ import {
       time: scheduleText || "",
       tickets: Number.isFinite(Number(tickets)) ? Number(tickets) : "",
     };
-    return { even: { ...slot }, odd: { ...slot } };
+    const week = DAY_ORDER.reduce((acc, day) => {
+      acc[day] = { ...slot };
+      return acc;
+    }, {});
+    return { even: { ...slot }, odd: { ...slot }, week };
   }
 
   function renderForm() {
@@ -763,6 +778,7 @@ import {
   }
 
   function renderDoctorCard(doctor, deptId, index, currentSpecialty = null) {
+    const scheduleMode = normalizeScheduleMode(doctor.scheduleMode);
     return `
       <div class="doctor-form${doctor.hidden ? " is-doctor-hidden" : ""}" data-doctor-id="${doctor.id}" data-dept-id="${deptId}" data-updated-at="${doctor.updatedAt || ""}">
         <div class="doctor-form-header">
@@ -813,44 +829,46 @@ import {
             <textarea class="form-textarea" name="doctorOfficeDescription" rows="2" placeholder="Описание кабинета врача">${escapeHtml(doctor.officeDescription || "")}</textarea>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group form-group-horizontal">
+            <label>Расписание</label>
+            <select class="form-input" name="doctorScheduleMode">
+              ${SCHEDULE_MODES.map(
+                (mode) =>
+                  `<option value="${mode}" ${
+                    scheduleMode === mode ? "selected" : ""
+                  }>${SCHEDULE_MODE_LABELS[mode]}</option>`
+              ).join("")}
+            </select>
+          </div>
+        </div>
         <div class="schedule-wrapper">
-          ${isUseByTicketEnabled() ? renderScheduleMode(doctor.schedule.byTicket, "byTicket", "По талону") : ""}
+          ${
+            isUseByTicketEnabled()
+              ? renderScheduleMode(
+                  doctor.schedule.byTicket,
+                  "byTicket",
+                  "По талону",
+                  scheduleMode
+                )
+              : ""
+          }
           ${renderScheduleMode(
             doctor.schedule.withoutTicket,
             "withoutTicket",
-            "Без талона"
+            "Без талона",
+            scheduleMode
           )}
         </div>
       </div>
     `;
   }
 
-  function renderScheduleMode(schedule, modeKey, label) {
-    const rows = PARITY_KEYS.map((parityKey) => {
-      const entry = schedule?.[parityKey] || { time: "", tickets: "" };
-      return `
-        <div class="schedule-parity" data-mode="${modeKey}" data-parity="${parityKey}">
-          <div class="schedule-parity-label">${PARITY_LABELS[parityKey]}</div>
-          <div class="schedule-parity-inputs">
-            <input
-              type="text"
-              class="form-input schedule-input"
-              data-field="time"
-              placeholder="09:00\u201313:00"
-              value="${escapeHtml(entry.time || "")}"
-            />
-            <input
-              type="number"
-              class="form-input schedule-input"
-              data-field="tickets"
-              placeholder="\u041a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0442\u0430\u043b\u043e\u043d\u043e\u0432"
-              min="0"
-              value="${entry.tickets === "" ? "" : escapeHtml(String(entry.tickets))}"
-            />
-          </div>
-        </div>
-      `;
-    }).join("");
+  function renderScheduleMode(schedule, modeKey, label, scheduleMode) {
+    const rows =
+      scheduleMode === "parity"
+        ? renderParityRows(schedule, modeKey)
+        : renderWeekRows(schedule, modeKey);
 
     return `
       <section class="schedule-mode" data-mode="${modeKey}">
@@ -861,6 +879,58 @@ import {
           ${rows}
         </div>
       </section>
+    `;
+  }
+
+  function renderParityRows(schedule, modeKey) {
+    return PARITY_KEYS.map((parityKey) =>
+      renderScheduleInputs({
+        mode: modeKey,
+        attr: `data-parity="${parityKey}"`,
+        cssClass: "schedule-parity",
+        label: PARITY_LABELS[parityKey],
+        entry: schedule?.[parityKey],
+      })
+    ).join("");
+  }
+
+  function renderWeekRows(schedule, modeKey) {
+    const showWeekends = isWeekendsEnabled();
+    return EDITABLE_DAYS.map((day) => {
+      const hidden = day === "\u0421\u0431" && !showWeekends;
+      return renderScheduleInputs({
+        mode: modeKey,
+        attr: `data-day="${day}"`,
+        cssClass: `schedule-day${hidden ? " is-hidden" : ""}`,
+        label: day,
+        entry: schedule?.week?.[day],
+      });
+    }).join("");
+  }
+
+  function renderScheduleInputs({ mode, attr, cssClass, label, entry }) {
+    const slot = entry || { time: "", tickets: "" };
+    return `
+      <div class="${cssClass} schedule-parity" data-mode="${mode}" ${attr}>
+        <div class="schedule-parity-label">${escapeHtml(label)}</div>
+        <div class="schedule-parity-inputs">
+          <input
+            type="text"
+            class="form-input schedule-input"
+            data-field="time"
+            placeholder="09:00\u201313:00"
+            value="${escapeHtml(slot.time || "")}"
+          />
+          <input
+            type="number"
+            class="form-input schedule-input"
+            data-field="tickets"
+            placeholder="\u041a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0442\u0430\u043b\u043e\u043d\u043e\u0432"
+            min="0"
+            value="${slot.tickets === "" ? "" : escapeHtml(String(slot.tickets))}"
+          />
+        </div>
+      </div>
     `;
   }
 
@@ -900,6 +970,7 @@ import {
       departmentsList.addEventListener("click", handleDepartmentsListClick);
       departmentsList.addEventListener("keydown", handleFieldKeydown);
       departmentsList.addEventListener("change", handleHiddenToggle);
+      departmentsList.addEventListener("change", handleScheduleModeChange);
     }
 
     const themeSelect = document.getElementById("themeSelect");
@@ -965,6 +1036,12 @@ import {
       next.focus();
       if (typeof next.select === "function") next.select();
     }
+  }
+
+  function handleScheduleModeChange(event) {
+    if (event.target.name !== "doctorScheduleMode") return;
+    syncCurrentData();
+    renderForm();
   }
 
   function handleHiddenToggle(event) {
@@ -1205,38 +1282,72 @@ import {
           'input[name="acceptsWithoutTicket"]'
         )?.checked;
 
+        const scheduleMode = normalizeScheduleMode(
+          form.querySelector('select[name="doctorScheduleMode"]')?.value
+        );
+
+        const readSlot = (container, fallback) => {
+          if (!container) return fallback || { time: "", tickets: "" };
+
+          const timeInput = container.querySelector(
+            '.schedule-input[data-field="time"]'
+          );
+          const ticketsRaw = container.querySelector(
+            '.schedule-input[data-field="tickets"]'
+          )?.value;
+
+          let tickets = "";
+          if (ticketsRaw !== "" && ticketsRaw !== undefined) {
+            const num = Number(ticketsRaw);
+            tickets = Number.isNaN(num) ? ticketsRaw : num;
+          }
+
+          return { time: (timeInput?.value || "").trim(), tickets };
+        };
+
         const schedule = {};
         for (const modeKey of ["byTicket", "withoutTicket"]) {
-          // Если полей этого режима на экране нет, сохраняем ранее введённое
-          if (!form.querySelector(`.schedule-parity[data-mode="${modeKey}"]`)) {
-            schedule[modeKey] = normalizeSchedule(storedDoctor?.schedule?.[modeKey]);
+          // Что не показано на экране, берём из ранее введённого
+          const stored = normalizeSchedule(storedDoctor?.schedule?.[modeKey]);
+          const present = form.querySelector(
+            `.schedule-parity[data-mode="${modeKey}"]`
+          );
+
+          if (!present) {
+            schedule[modeKey] = stored;
             continue;
           }
 
-          schedule[modeKey] = {};
-          for (const parityKey of PARITY_KEYS) {
-            const container = form.querySelector(
-              `.schedule-parity[data-mode="${modeKey}"][data-parity="${parityKey}"]`
-            );
-            const timeInput = container?.querySelector(
-              '.schedule-input[data-field="time"]'
-            );
-            const ticketsInput = container?.querySelector(
-              '.schedule-input[data-field="tickets"]'
-            );
-
-            const ticketsValueRaw = ticketsInput?.value;
-            let ticketsValue = "";
-            if (ticketsValueRaw !== "" && ticketsValueRaw !== undefined) {
-              const num = Number(ticketsValueRaw);
-              ticketsValue = Number.isNaN(num) ? ticketsValueRaw : num;
-            }
-
-            schedule[modeKey][parityKey] = {
-              time: (timeInput?.value || "").trim(),
-              tickets: ticketsValue,
+          if (scheduleMode === "parity") {
+            schedule[modeKey] = {
+              even: readSlot(
+                form.querySelector(
+                  `.schedule-parity[data-mode="${modeKey}"][data-parity="even"]`
+                ),
+                stored.even
+              ),
+              odd: readSlot(
+                form.querySelector(
+                  `.schedule-parity[data-mode="${modeKey}"][data-parity="odd"]`
+                ),
+                stored.odd
+              ),
+              week: stored.week,
             };
+            continue;
           }
+
+          const week = {};
+          for (const day of DAY_ORDER) {
+            week[day] = readSlot(
+              form.querySelector(
+                `.schedule-parity[data-mode="${modeKey}"][data-day="${day}"]`
+              ),
+              stored.week?.[day]
+            );
+          }
+
+          schedule[modeKey] = { even: stored.even, odd: stored.odd, week };
         }
 
         return {
@@ -1256,6 +1367,7 @@ import {
           hidden: Boolean(
             form.querySelector('input[name="doctorHidden"]')?.checked
           ),
+          scheduleMode,
           accepts: {
             byTicket: Boolean(acceptsByTicket),
             withoutTicket: Boolean(acceptsWithoutTicket),

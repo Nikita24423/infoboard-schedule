@@ -82,11 +82,49 @@ export const PARITY_SHORT = {
   odd: "нечёт",
 };
 
+// У каждого врача свой способ задать расписание
+export const SCHEDULE_MODES = ["weekly", "parity"];
+
+export const SCHEDULE_MODE_LABELS = {
+  weekly: "\u041f\u043e \u0434\u043d\u044f\u043c \u043d\u0435\u0434\u0435\u043b\u0438",
+  parity: "\u041f\u043e \u0447\u0451\u0442\u043d\u044b\u043c \u0438 \u043d\u0435\u0447\u0451\u0442\u043d\u044b\u043c \u0447\u0438\u0441\u043b\u0430\u043c",
+};
+
+export const DEFAULT_SCHEDULE_MODE = "weekly";
+
+export function normalizeScheduleMode(value) {
+  return SCHEDULE_MODES.includes(value) ? value : DEFAULT_SCHEDULE_MODE;
+}
+
+// У старых записей режим не указан — определяем его по тому, что заполнено
+export function inferScheduleMode(doctor) {
+  if (doctor?.scheduleMode) return normalizeScheduleMode(doctor.scheduleMode);
+
+  const schedules = Object.values(doctor?.schedule || {});
+  const hasWeek = schedules.some((item) =>
+    DAY_ORDER.some((day) => String(item?.week?.[day]?.time || item?.[day]?.time || "").trim())
+  );
+  if (hasWeek) return "weekly";
+
+  const hasParity = schedules.some(
+    (item) => String(item?.even?.time || "").trim() || String(item?.odd?.time || "").trim()
+  );
+  return hasParity ? "parity" : DEFAULT_SCHEDULE_MODE;
+}
+
 export function createEmptySchedule() {
   return {
     even: { time: "", tickets: "" },
     odd: { time: "", tickets: "" },
+    week: createEmptyWeek(),
   };
+}
+
+export function createEmptyWeek() {
+  return DAY_ORDER.reduce((acc, day) => {
+    acc[day] = { time: "", tickets: "" };
+    return acc;
+  }, {});
 }
 
 function normalizeSlot(slot) {
@@ -100,30 +138,42 @@ function normalizeSlot(slot) {
   };
 }
 
-// Принимает и новый формат {even, odd}, и старый — сетку по дням недели
+function normalizeWeek(source) {
+  const week = createEmptyWeek();
+  if (!source || typeof source !== "object") return week;
+
+  for (const day of DAY_ORDER) {
+    if (source[day]) week[day] = normalizeSlot(source[day]);
+  }
+  return week;
+}
+
+// Храним оба вида сразу, чтобы переключение режима ничего не теряло.
+// Понимает и старый формат — голую сетку по дням недели
 export function normalizeSchedule(source) {
   if (!source || typeof source !== "object") {
     return createEmptySchedule();
   }
 
-  if (source.even || source.odd) {
+  const hasParity = Boolean(source.even || source.odd);
+  const weekSource = source.week || (hasParity ? null : source);
+  const week = normalizeWeek(weekSource);
+
+  if (hasParity) {
     return {
       even: normalizeSlot(source.even),
       odd: normalizeSlot(source.odd),
+      week,
     };
   }
 
-  // Старые данные: берём первый день со временем и ставим его в оба поля
-  const firstFilledDay = DAY_ORDER.map((day) => source[day]).find(
-    (entry) => entry && String(entry.time ?? entry.hours ?? "").trim()
+  // Старые данные: первый день со временем становится заготовкой для чёт/нечёт
+  const firstFilledDay = DAY_ORDER.map((day) => week[day]).find((entry) =>
+    String(entry?.time || "").trim()
   );
+  const slot = firstFilledDay ? { ...firstFilledDay } : { time: "", tickets: "" };
 
-  if (!firstFilledDay) {
-    return createEmptySchedule();
-  }
-
-  const slot = normalizeSlot(firstFilledDay);
-  return { even: { ...slot }, odd: { ...slot } };
+  return { even: { ...slot }, odd: { ...slot }, week };
 }
 
 // Дата дня недели в той же неделе, что и сегодняшняя
