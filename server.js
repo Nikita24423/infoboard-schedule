@@ -38,10 +38,13 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const CURRENT_FILE = path.join(DATA_DIR, "current.json");
 const CONFIG_FILE = path.join(process.cwd(), "config.js");
 const CONFIG_BACKUP_FILE = path.join(process.cwd(), "config.backup.js");
-const CONFIGS_FILE = path.join(DATA_DIR, "configs.json");
+// Каждая сохранённая конфигурация — отдельный файл в этой папке
+const CONFIGS_DIR = path.join(DATA_DIR, "configs");
+const LEGACY_CONFIGS_FILE = path.join(DATA_DIR, "configs.json");
+const MAX_SAVED_CONFIGS = 50;
 
 let adminData = readJsonFile(CURRENT_FILE); // Данные, сохраненные через админ-панель
-let savedConfigs = readJsonFile(CONFIGS_FILE) || [];
+let savedConfigs = loadSavedConfigs(); // без самих данных: { id, name, createdAt, file }
 
 app.get("/api/schedule", async (req, res) => {
   try {
@@ -219,9 +222,23 @@ app.post("/api/configs", (req, res) => {
     data,
   };
 
-  savedConfigs.unshift(entry);
-  savedConfigs = savedConfigs.slice(0, 50); // храним последние 50
-  writeJsonFile(CONFIGS_FILE, savedConfigs);
+  const file = configFileName(entry);
+  if (!writeJsonFile(path.join(CONFIGS_DIR, file), entry)) {
+    return res.status(500).json({ error: "Не удалось сохранить конфигурацию" });
+  }
+
+  savedConfigs.unshift({
+    id: entry.id,
+    name: entry.name,
+    createdAt: entry.createdAt,
+    file,
+  });
+
+  // Храним последние 50, старые файлы удаляем
+  for (const extra of savedConfigs.slice(MAX_SAVED_CONFIGS)) {
+    removeConfigFile(extra);
+  }
+  savedConfigs = savedConfigs.slice(0, MAX_SAVED_CONFIGS);
 
   res.json({ id: entry.id, name: entry.name, createdAt: entry.createdAt });
 });
@@ -229,20 +246,23 @@ app.post("/api/configs", (req, res) => {
 // Забрать один конфиг целиком
 app.get("/api/configs/:id", (req, res) => {
   const entry = savedConfigs.find((item) => item.id === req.params.id);
-  if (!entry) {
+  const stored = entry
+    ? readJsonFile(path.join(CONFIGS_DIR, entry.file))
+    : null;
+  if (!stored) {
     return res.status(404).json({ error: "Конфигурация не найдена" });
   }
-  res.json(entry);
+  res.json(stored);
 });
 
 // Удалить конфиг
 app.delete("/api/configs/:id", (req, res) => {
-  const before = savedConfigs.length;
-  savedConfigs = savedConfigs.filter((item) => item.id !== req.params.id);
-  if (savedConfigs.length === before) {
+  const entry = savedConfigs.find((item) => item.id === req.params.id);
+  if (!entry) {
     return res.status(404).json({ error: "Конфигурация не найдена" });
   }
-  writeJsonFile(CONFIGS_FILE, savedConfigs);
+  savedConfigs = savedConfigs.filter((item) => item.id !== entry.id);
+  removeConfigFile(entry);
   res.json({ success: true });
 });
 
@@ -258,10 +278,74 @@ function readJsonFile(file) {
 
 function writeJsonFile(file, value) {
   try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(value, null, 2), "utf8");
+    return true;
   } catch (e) {
     console.error("Не удалось записать " + file + ":", e.message);
+    return false;
+  }
+}
+
+// Имя файла делаем читаемым, но без символов, запретных в Windows
+function configFileName(entry) {
+  const slug = String(entry.name || "")
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+  return (slug ? slug + " " : "") + entry.id + ".json";
+}
+
+function removeConfigFile(entry) {
+  try {
+    fs.rmSync(path.join(CONFIGS_DIR, entry.file), { force: true });
+  } catch (e) {
+    console.error("Не удалось удалить " + entry.file + ":", e.message);
+  }
+}
+
+// Собираем список из папки data/configs, перенося старый единый configs.json
+function loadSavedConfigs() {
+  migrateLegacyConfigs();
+
+  let names = [];
+  try {
+    names = fs.readdirSync(CONFIGS_DIR).filter((n) => n.endsWith(".json"));
+  } catch (e) {
+    return [];
+  }
+
+  const list = [];
+  for (const file of names) {
+    const entry = readJsonFile(path.join(CONFIGS_DIR, file));
+    if (!entry?.id) continue;
+    list.push({
+      id: entry.id,
+      name: entry.name || file.replace(/\.json$/, ""),
+      createdAt: entry.createdAt || "",
+      file,
+    });
+  }
+
+  // Свежие сверху — так же, как их добавляет панель
+  list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return list;
+}
+
+function migrateLegacyConfigs() {
+  const legacy = readJsonFile(LEGACY_CONFIGS_FILE);
+  if (!Array.isArray(legacy)) return;
+
+  for (const entry of legacy) {
+    if (!entry?.id) continue;
+    writeJsonFile(path.join(CONFIGS_DIR, configFileName(entry)), entry);
+  }
+
+  try {
+    fs.renameSync(LEGACY_CONFIGS_FILE, LEGACY_CONFIGS_FILE + ".old");
+  } catch (e) {
+    console.error("Не удалось убрать старый configs.json:", e.message);
   }
 }
 
