@@ -25,7 +25,7 @@ export const DEFAULTS = {
   showTicketsRemaining: true,
   useByTicket: false,
   departmentLayout: "2",
-  doctorsPerPage: 0,
+  doctorsPerPage: 3,
   fontFamily: "Inter",
 };
 
