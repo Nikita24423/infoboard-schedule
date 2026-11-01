@@ -25,6 +25,7 @@ export const DEFAULTS = {
   showTicketsRemaining: true,
   useByTicket: false,
   departmentLayout: "2",
+  doctorsPerPage: 0,
   fontFamily: "Inter",
 };
 
@@ -34,6 +35,13 @@ export function normalizeBackgroundStyle(value) {
 }
 
 // "row"/"column" — старый формат, число 1–4 — текущий
+// 0 — показывать всех врачей сразу
+export function normalizeDoctorsPerPage(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return Math.min(Math.floor(number), 20);
+}
+
 export function normalizeDepartmentLayout(value) {
   if (value === "row") return "2";
   if (value === "column") return "1";
@@ -58,6 +66,7 @@ export function normalizeDisplay(display = {}) {
     showTicketsRemaining: flag("showTicketsRemaining"),
     useByTicket: flag("useByTicket"),
     departmentLayout: normalizeDepartmentLayout(source.departmentLayout),
+    doctorsPerPage: normalizeDoctorsPerPage(source.doctorsPerPage),
     fontFamily: source.fontFamily || DEFAULTS.fontFamily,
   };
 }

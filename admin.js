@@ -11,6 +11,7 @@ import {
   inferScheduleMode,
   normalizeBackgroundStyle,
   normalizeDepartmentLayout,
+  normalizeDoctorsPerPage,
   normalizeSchedule,
   normalizeScheduleMode,
 } from "./shared.js";
@@ -349,6 +350,24 @@ import {
     return normalizeDepartmentLayout(data?.display?.departmentLayout);
   }
 
+  function getDoctorsPerPage(data = currentData) {
+    return normalizeDoctorsPerPage(data?.display?.doctorsPerPage);
+  }
+
+  function updateDoctorsPerPageUI() {
+    const input = document.getElementById("doctorsPerPage");
+    if (input) input.value = getDoctorsPerPage();
+  }
+
+  function handleDoctorsPerPageChange(event) {
+    const value = normalizeDoctorsPerPage(event.target.value);
+    syncCurrentData();
+    currentData.display = {
+      ...(currentData.display || {}),
+      doctorsPerPage: value,
+    };
+  }
+
   function updateDepartmentLayoutUI() {
     const select = document.getElementById("departmentLayout");
     const layout = getDepartmentLayout();
@@ -427,6 +446,7 @@ import {
           ? DEFAULT_USE_BY_TICKET
           : Boolean(data.display.useByTicket);
       const departmentLayout = getDepartmentLayout(data);
+      const doctorsPerPage = getDoctorsPerPage(data);
       const fontFamily = getFontFamily(data);
       return {
         ...base,
@@ -451,6 +471,7 @@ import {
           showTicketsRemaining,
           useByTicket,
           departmentLayout,
+          doctorsPerPage,
           fontFamily,
         },
         updatedAt: data.updatedAt || new Date().toISOString(),
@@ -499,6 +520,7 @@ import {
         ? DEFAULT_USE_BY_TICKET
         : Boolean(data.display.useByTicket);
     const departmentLayout = getDepartmentLayout(data);
+    const doctorsPerPage = getDoctorsPerPage(data);
     const fontFamily = getFontFamily(data);
 
     return {
@@ -510,6 +532,7 @@ import {
         showTicketsRemaining,
         useByTicket,
         departmentLayout,
+        doctorsPerPage,
         fontFamily,
       },
       updatedAt: data.updatedAt || new Date().toISOString(),
@@ -672,6 +695,7 @@ import {
     updateTicketsRemainingToggleUI();
     updateUseByTicketToggleUI();
     updateDepartmentLayoutUI();
+    updateDoctorsPerPageUI();
     updateFontFamilyUI();
 
     const departmentsList = document.getElementById("departmentsList");
@@ -993,6 +1017,11 @@ import {
       useByTicketToggle.addEventListener("change", handleUseByTicketToggle);
     }
 
+    const doctorsPerPage = document.getElementById("doctorsPerPage");
+    if (doctorsPerPage) {
+      doctorsPerPage.addEventListener("change", handleDoctorsPerPageChange);
+    }
+
     const departmentLayout = document.getElementById("departmentLayout");
     if (departmentLayout) {
       departmentLayout.addEventListener("change", handleDepartmentLayoutChange);
@@ -1018,10 +1047,13 @@ import {
 
   // Enter в поле ввода переводит к следующему полю, Shift+Enter — к предыдущему
   function handleFieldKeydown(event) {
-    if (event.key !== "Enter" || event.target.tagName !== "INPUT") return;
+    const moveKeys = ["Enter", "ArrowDown", "ArrowUp"];
+    if (!moveKeys.includes(event.key)) return;
+    if (event.target.tagName !== "INPUT") return;
     if (event.target.type === "checkbox") return;
 
     event.preventDefault();
+    const back = event.key === "ArrowUp" || event.shiftKey;
     const fields = Array.from(
       document.querySelectorAll(
         "#departmentsList input:not([type=checkbox]), #departmentsList textarea"
@@ -1031,7 +1063,7 @@ import {
     const index = fields.indexOf(event.target);
     if (index === -1) return;
 
-    const next = fields[index + (event.shiftKey ? -1 : 1)];
+    const next = fields[index + (back ? -1 : 1)];
     if (next) {
       next.focus();
       if (typeof next.select === "function") next.select();
@@ -1232,6 +1264,7 @@ import {
     const showWeekendsToggle = document.getElementById("showWeekendsToggle");
     const showTicketsRemainingToggle = document.getElementById("showTicketsRemainingToggle");
     const useByTicketToggle = document.getElementById("useByTicketToggle");
+    const doctorsPerPageInput = document.getElementById("doctorsPerPage");
     const departmentLayoutSelect = document.getElementById("departmentLayout");
     const fontFamilySelect = document.getElementById("fontFamily");
 
@@ -1255,6 +1288,9 @@ import {
     const showTicketsRemaining = Boolean(showTicketsRemainingToggle?.checked);
     const useByTicket = Boolean(useByTicketToggle?.checked);
     const departmentLayout = departmentLayoutSelect?.value || DEFAULT_DEPARTMENT_LAYOUT;
+    const doctorsPerPage = normalizeDoctorsPerPage(
+      doctorsPerPageInput?.value ?? currentData.display?.doctorsPerPage
+    );
     const fontFamily = fontFamilySelect?.value || DEFAULT_FONT_FAMILY;
 
     const departments = deptCards.map((card, index) => {
@@ -1402,6 +1438,7 @@ import {
         showTicketsRemaining,
         useByTicket,
         departmentLayout,
+        doctorsPerPage,
         fontFamily,
       },
       updatedAt: forSave ? new Date().toISOString() : currentData.updatedAt,

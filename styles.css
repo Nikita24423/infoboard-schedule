@@ -416,3 +416,14 @@ body[data-board-bg="forest"] {
   text-transform: none;
   margin-top: 2px;
 }
+
+.department-part {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--fg-light);
+  font-size: 0.6em;
+  font-weight: 600;
+  white-space: nowrap;
+}

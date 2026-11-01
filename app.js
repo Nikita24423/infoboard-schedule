@@ -11,6 +11,7 @@ import {
   inferScheduleMode,
   isDoctorVisibleToday,
   normalizeDisplay,
+  normalizeDoctorsPerPage,
   normalizeOffice,
   normalizeSchedule,
 } from "./shared.js";
@@ -254,11 +255,18 @@ import {
         ? doctors.map((doc) => renderDoctorCard(doc, dept, visibleDays, showTicketsRemaining)).join("")
         : '<div class="department-placeholder">Врачи не назначены</div>';
 
+    // Когда отделение разбито на несколько экранов — показываем, какой идёт
+    const partHint =
+      dept.pageTotal > 1
+        ? `<div class="department-part">${dept.pagePart} из ${dept.pageTotal}</div>`
+        : "";
+
     return `
       <section class="department-card">
         <header class="department-header">
           <div class="department-number">${escapeHtml(titleNumber)}</div>
           <div class="department-name">${escapeHtml(dept.name || "Отделение")}</div>
+          ${partHint}
         </header>
         <div class="department-body">
           ${doctorsHtml}
@@ -593,12 +601,40 @@ import {
       orderedDepartments.push(...fallback);
     }
 
+    // Когда врачей больше, чем помещается, отделение показывается
+    // несколькими экранами по очереди, а не уезжает за нижний край
+    const doctorsPerPage = normalizeDoctorsPerPage(
+      payload?.display?.doctorsPerPage
+    );
+
+    const blocks = [];
+    for (const dept of orderedDepartments) {
+      const doctors = (Array.isArray(dept.doctors) ? dept.doctors : []).filter(
+        isDoctorVisibleToday
+      );
+
+      if (!doctorsPerPage || doctors.length <= doctorsPerPage) {
+        blocks.push(dept);
+        continue;
+      }
+
+      const total = Math.ceil(doctors.length / doctorsPerPage);
+      for (let i = 0; i < doctors.length; i += doctorsPerPage) {
+        blocks.push({
+          ...dept,
+          doctors: doctors.slice(i, i + doctorsPerPage),
+          pagePart: Math.floor(i / doctorsPerPage) + 1,
+          pageTotal: total,
+        });
+      }
+    }
+
     const pages = [];
-    if (orderedDepartments.length === 0) {
+    if (blocks.length === 0) {
       pages.push([]);
     } else {
-      for (let i = 0; i < orderedDepartments.length; i += pageSize) {
-        pages.push(orderedDepartments.slice(i, i + pageSize));
+      for (let i = 0; i < blocks.length; i += pageSize) {
+        pages.push(blocks.slice(i, i + pageSize));
       }
     }
 
