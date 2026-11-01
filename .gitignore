@@ -1,4 +1,4 @@
-node_modules/
+Программа/node_modules/
 Сохранения/
+Программа/config.backup.js
 .claude/
-config.backup.js

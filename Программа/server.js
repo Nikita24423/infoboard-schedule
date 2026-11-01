@@ -3,16 +3,21 @@ import fetch from "node-fetch";
 import morgan from "morgan";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import {
   DAY_ORDER,
   normalizeDisplay,
   normalizeOffice,
 } from "./shared.js";
 
+// Файлы программы лежат в своей папке, «Сохранения» — рядом с ней
+const APP_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.join(APP_DIR, "..");
+
 const app = express();
 app.use(morgan("tiny"));
 app.use(express.json({ limit: "5mb" })); // Для работы с JSON в POST запросах
-app.use(express.static(".")); // Для раздачи статических файлов (HTML, CSS, JS)
+app.use(express.static(APP_DIR)); // Для раздачи статических файлов (HTML, CSS, JS)
 
 const PORT = process.env.PORT || 3000;
 
@@ -34,11 +39,11 @@ const MIN_FETCH_INTERVAL_MS = Number(process.env.MIN_FETCH_INTERVAL_MS || 5000);
 
 let lastFetchAt = 0;
 let cache = { data: null, ts: 0 };
-const DATA_DIR = path.join(process.cwd(), "Сохранения");
-const LEGACY_DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = path.join(ROOT_DIR, "Сохранения");
+const LEGACY_DATA_DIR = path.join(APP_DIR, "data");
 const CURRENT_FILE = path.join(DATA_DIR, "current.json");
-const CONFIG_FILE = path.join(process.cwd(), "config.js");
-const CONFIG_BACKUP_FILE = path.join(process.cwd(), "config.backup.js");
+const CONFIG_FILE = path.join(APP_DIR, "config.js");
+const CONFIG_BACKUP_FILE = path.join(APP_DIR, "config.backup.js");
 // Каждая сохранённая конфигурация — отдельный файл в этой папке
 const CONFIGS_DIR = path.join(DATA_DIR, "configs");
 const LEGACY_CONFIGS_FILE = path.join(DATA_DIR, "configs.json");

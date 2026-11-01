@@ -6,7 +6,14 @@ echo ========================================
 echo.
 
 REM Получаем путь к директории, где находится этот batch файл
-set "PROJECT_PATH=%~dp0"
+REM Папку с файлами программы ищем по server.js — так имя папки не важно
+set "PROJECT_PATH="
+for /d %%D in ("%~dp0*") do if exist "%%~fD\server.js" set "PROJECT_PATH=%%~fD"
+if not defined PROJECT_PATH (
+    echo ОШИБКА: рядом с этим файлом нет папки с программой!
+    pause
+    exit /b 1
+)
 
 echo [1/4] Путь к проекту: %PROJECT_PATH%
 echo.
@@ -35,7 +42,7 @@ echo.
 
 REM Устанавливаем зависимости (если node_modules не существует)
 echo [4/4] Установка зависимостей (npm install)...
-if not exist "node_modules" (
+if not exist "node_modules\express\package.json" (
     echo Установка зависимостей...
     call npm install
     if errorlevel 1 (
