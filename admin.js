@@ -1170,11 +1170,11 @@ import {
 
   function handleLoadFromConfig() {
     if (!cfg || !cfg.mockData) {
-      showNotification("Данные из config.js не найдены", "error");
+      showNotification("Сохранение не найдено", "error");
       return;
     }
     
-    if (!confirm("Загрузить данные из config.js? Текущие несохраненные изменения будут потеряны.")) {
+    if (!confirm("Загрузить сохранение? Текущие несохранённые изменения будут потеряны.")) {
       return;
     }
 
@@ -1182,18 +1182,18 @@ import {
       const configData = structuredClone(cfg.mockData);
       currentData = normalizeData(configData);
       renderForm();
-      showNotification("Данные загружены из config.js", "success");
+      showNotification("Сохранение загружено", "success");
     } catch (err) {
-      console.error("Ошибка загрузки из config.js:", err);
-      showNotification("Не удалось загрузить данные из config.js", "error");
+      console.error("Ошибка загрузки сохранения:", err);
+      showNotification("Не удалось загрузить сохранение", "error");
     }
   }
 
-  // Парная кнопка к «Загрузить из config.js»: пишет текущие данные в файл
+  // Парная кнопка к «Загрузить сохранение»: пишет текущие данные в config.js
   async function handleSaveToConfig() {
     if (
       !confirm(
-        "Записать текущие настройки в config.js? Прежняя версия файла будет сохранена как config.backup.js."
+        "Сохранить текущие настройки в папку программы? Прежняя версия останется в config.backup.js."
       )
     ) {
       return;
@@ -1219,10 +1219,10 @@ import {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      showNotification("Данные записаны в config.js", "success");
+      showNotification("Настройки сохранены в папку программы", "success");
     } catch (err) {
-      console.error("Ошибка записи config.js:", err);
-      showNotification("Не удалось записать config.js", "error");
+      console.error("Ошибка сохранения в папку:", err);
+      showNotification("Не удалось сохранить в папку", "error");
     }
   }
 

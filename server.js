@@ -34,7 +34,8 @@ const MIN_FETCH_INTERVAL_MS = Number(process.env.MIN_FETCH_INTERVAL_MS || 5000);
 
 let lastFetchAt = 0;
 let cache = { data: null, ts: 0 };
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = path.join(process.cwd(), "Сохранения");
+const LEGACY_DATA_DIR = path.join(process.cwd(), "data");
 const CURRENT_FILE = path.join(DATA_DIR, "current.json");
 const CONFIG_FILE = path.join(process.cwd(), "config.js");
 const CONFIG_BACKUP_FILE = path.join(process.cwd(), "config.backup.js");
@@ -42,6 +43,8 @@ const CONFIG_BACKUP_FILE = path.join(process.cwd(), "config.backup.js");
 const CONFIGS_DIR = path.join(DATA_DIR, "configs");
 const LEGACY_CONFIGS_FILE = path.join(DATA_DIR, "configs.json");
 const MAX_SAVED_CONFIGS = 50;
+
+migrateLegacyDataDir();
 
 let adminData = readJsonFile(CURRENT_FILE); // Данные, сохраненные через админ-панель
 let savedConfigs = loadSavedConfigs(); // без самих данных: { id, name, createdAt, file }
@@ -184,7 +187,7 @@ function buildConfigFile(data, settings = {}) {
 
   return [
     "// Конфиг макета и поведения.",
-    "// Файл создан кнопкой «Сохранить в config.js» в админ-панели " +
+    "// Файл создан кнопкой «Сохранить в папку» в админ-панели " +
       new Date().toLocaleString("ru-RU") +
       ".",
     "// Предыдущая версия лежит в config.backup.js",
@@ -331,6 +334,16 @@ function loadSavedConfigs() {
   // Свежие сверху — так же, как их добавляет панель
   list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   return list;
+}
+
+// Папка data из старых версий переезжает в «Сохранения»
+function migrateLegacyDataDir() {
+  try {
+    if (!fs.existsSync(LEGACY_DATA_DIR) || fs.existsSync(DATA_DIR)) return;
+    fs.renameSync(LEGACY_DATA_DIR, DATA_DIR);
+  } catch (e) {
+    console.error("Не удалось перенести папку data:", e.message);
+  }
 }
 
 function migrateLegacyConfigs() {
