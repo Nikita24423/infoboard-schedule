@@ -1049,14 +1049,20 @@ import {
   function handleFieldKeydown(event) {
     const moveKeys = ["Enter", "ArrowDown", "ArrowUp"];
     if (!moveKeys.includes(event.key)) return;
-    if (event.target.tagName !== "INPUT") return;
+
+    const tag = event.target.tagName;
+    if (tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA") return;
     if (event.target.type === "checkbox") return;
+
+    // В списке стрелки иначе листают варианты и фокус застревает.
+    // Менять значение с клавиатуры можно через Alt+стрелка или первой буквой
+    if (tag === "SELECT" && event.altKey) return;
 
     event.preventDefault();
     const back = event.key === "ArrowUp" || event.shiftKey;
     const fields = Array.from(
       document.querySelectorAll(
-        "#departmentsList input:not([type=checkbox]), #departmentsList textarea"
+        "#departmentsList input:not([type=checkbox]), #departmentsList select, #departmentsList textarea"
       )
     ).filter((el) => !el.disabled && el.offsetParent !== null);
 
