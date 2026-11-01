@@ -290,14 +290,19 @@ function writeJsonFile(file, value) {
   }
 }
 
-// Имя файла делаем читаемым, но без символов, запретных в Windows
+// Файлы называем по дате сохранения: Сохранение_01-11-2026.json.
+// Если за день их несколько — добавляем номер.
 function configFileName(entry) {
-  const slug = String(entry.name || "")
-    .replace(/[\\/:*?"<>|]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 60);
-  return (slug ? slug + " " : "") + entry.id + ".json";
+  const date = new Date(entry.createdAt || Date.now());
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const base = `Сохранение_${dd}-${mm}-${date.getFullYear()}`;
+
+  let name = base + ".json";
+  for (let i = 2; fs.existsSync(path.join(CONFIGS_DIR, name)); i += 1) {
+    name = `${base}_${i}.json`;
+  }
+  return name;
 }
 
 function removeConfigFile(entry) {
