@@ -49,7 +49,7 @@ import {
         const numColumns = Number.isFinite(columns) && columns >= 1 && columns <= 4 ? columns : 2;
         const pages = state.rotation.pages;
         const currentDepartments = pages[state.rotation.index] || [];
-        applyDisplaySettings(payload, numColumns, currentDepartments.length);
+        applyDisplaySettings(payload);
         renderLastKnown();
       }
     }, 100);
@@ -65,7 +65,7 @@ import {
       const numColumns = Number.isFinite(columns) && columns >= 1 && columns <= 4 ? columns : 2;
       const pages = state.rotation.pages;
       const currentDepartments = pages[state.rotation.index] || [];
-      applyDisplaySettings(payload, numColumns, currentDepartments.length);
+      applyDisplaySettings(payload);
     }
     renderLastKnown();
   });
@@ -221,7 +221,7 @@ import {
     const currentDepartments = pages[pageIndex] || [];
     
     // Применяем настройки отображения с учетом количества столбцов и отделений для автоматического масштабирования
-    applyDisplaySettings(payload, numColumns, currentDepartments.length);
+    applyDisplaySettings(payload);
     const now = new Date();
 
     const departmentsHtml =
@@ -368,111 +368,21 @@ import {
     `;
   }
 
-  function calculateAutoScale(numColumns, numDepartments = 1) {
-    if (typeof window === "undefined") return DEFAULT_SCALE;
-    
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Отступы (padding по 24px с каждой стороны)
-    const padding = 48;
-    // Gap между отделениями (12px между столбцами и строками)
-    const gap = 12;
-    
-    // Доступная ширина для контента (экран минус padding)
-    const availableWidth = viewportWidth - padding;
-    
-    // Ширина одного столбца при равномерном распределении (grid с 1fr)
-    const gapWidth = gap * (numColumns - 1);
-    const columnWidth = (availableWidth - gapWidth) / numColumns;
-    
-    // Минимальная ширина одного отделения для комфортного отображения
-    // Это базовая ширина контента отделения без масштабирования
-    const baseDepartmentWidth = 400;
-    
-    // Рассчитываем масштаб так, чтобы столбцы занимали всю доступную ширину
-    // и при этом контент был читаемым
-    let scaleByWidth = columnWidth / baseDepartmentWidth;
-    
-    // Для 3-4 столбцов немного увеличиваем масштаб, чтобы они занимали всю ширину
-    if (numColumns === 3) {
-      // Для 3 столбцов используем немного больший масштаб, чтобы они растянулись
-      scaleByWidth = Math.min(1, scaleByWidth * 1.05);
-    } else if (numColumns === 4) {
-      // Для 4 столбцов немного уменьшаем, чтобы они точно поместились
-      scaleByWidth = Math.min(1, scaleByWidth * 0.98);
-    }
-    
-    // Учитываем высоту с учетом возможных нескольких строк отделений
-    // Рассчитываем количество строк на основе количества отделений
-    const numRows = Math.ceil(numDepartments / numColumns);
-    
-    // Высота одного отделения (примерная, зависит от количества врачей)
-    // Учитываем уменьшенные отступы: padding 14px 16px 16px, gap 14px внутри, gap 12px между
-    const departmentHeight = 420; // Примерная высота одного отделения с 2-3 врачами (уменьшена из-за меньших отступов)
-    const gapHeight = gap * (numRows - 1);
-    const estimatedContentHeight = (departmentHeight * numRows) + gapHeight;
-    
-    const topbarHeight = 80; // Высота верхней панели
-    const requiredHeight = estimatedContentHeight + topbarHeight + padding;
-    let scaleByHeight = viewportHeight / requiredHeight;
-    
-    // Берем минимальный масштаб, чтобы контент поместился и по ширине, и по высоте
-    // Не превышаем 1.0, чтобы не увеличивать контент
-    let autoScale = Math.min(scaleByWidth, scaleByHeight, 1);
-    
-    // Ограничиваем масштаб разумными пределами (от 0.5 до 1.0)
-    autoScale = Math.max(0.5, Math.min(1, autoScale));
-    
-    return autoScale;
-  }
-
-  function applyDisplaySettings(payload, numColumns = null, numDepartments = 1) {
+  function applyDisplaySettings(payload) {
     const style = normalizeDisplay(payload?.display).backgroundStyle;
     const fontFamily = payload?.display?.fontFamily || DEFAULT_FONT_FAMILY;
-    
-    // Масштаб считается автоматически по числу столбцов и отделений
-    const fontScale =
-      numColumns !== null && numColumns >= 1 && numColumns <= 4
-        ? calculateAutoScale(numColumns, numDepartments)
-        : DEFAULT_SCALE;
-    
-    if (typeof document !== "undefined" && document.body) {
-      document.body.setAttribute("data-board-bg", style);
-      document.documentElement.style.setProperty("--font-family", fontFamily);
-      document.documentElement.style.setProperty("--font-scale", fontScale);
-      
-      // Масштабируем контейнер #root вместо body для лучшего контроля
-      const rootElement = document.getElementById("root");
-      if (rootElement) {
-        if (fontScale !== 1) {
-          // Используем абсолютное позиционирование с центрированием через transform
-          rootElement.style.position = "absolute";
-          rootElement.style.top = "50%";
-          rootElement.style.left = "50%";
-          rootElement.style.transform = `translate(-50%, -50%) scale(${fontScale})`;
-          rootElement.style.transformOrigin = "center center";
-          // Компенсируем размеры контейнера, чтобы контент не выходил за пределы
-          rootElement.style.width = `${100 / fontScale}%`;
-          rootElement.style.height = `${100 / fontScale}%`;
-        } else {
-          rootElement.style.position = "";
-          rootElement.style.top = "";
-          rootElement.style.left = "";
-          rootElement.style.transform = "";
-          rootElement.style.transformOrigin = "";
-          rootElement.style.width = "";
-          rootElement.style.height = "";
-        }
-      }
-      
-      // Убеждаемся, что html и body не создают прокрутку
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-      document.body.style.margin = "0";
-      document.body.style.padding = "0";
-    }
+
+    if (typeof document === "undefined" || !document.body) return;
+
+    document.body.setAttribute("data-board-bg", style);
+    document.documentElement.style.setProperty("--font-family", fontFamily);
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
   }
+
 
   function getCurrentDay() {
     const now = new Date();
